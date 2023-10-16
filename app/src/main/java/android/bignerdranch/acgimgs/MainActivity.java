@@ -1,7 +1,6 @@
 package android.bignerdranch.acgimgs;
 
-import static android.content.res.Configuration.*;
-
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Context;
@@ -22,12 +21,10 @@ import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -39,6 +36,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.FragmentManager;
 
 
 import com.bumptech.glide.Glide;
@@ -95,9 +93,9 @@ public class MainActivity extends AppCompatActivity {
     private String author;
     private String tags;
     private int r18;
-    private String selected_filename;
 
     private String search_text;
+
 
     private ArrayList<myCollection> new_collections = new ArrayList<>();
     private myCollection new_collection;
@@ -128,6 +126,8 @@ public class MainActivity extends AppCompatActivity {
         mDrawerLayout = (DrawerLayout) findViewById(R.id.menu_drawer);
         mNavigationView = (NavigationView) findViewById(R.id.navigation_view);
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+
+        FragmentManager fragmentManager = getSupportFragmentManager();
 
         if (savedInstanceState != null) {
             imgUrl = savedInstanceState.getString("url");
@@ -170,7 +170,7 @@ public class MainActivity extends AppCompatActivity {
             public boolean onNavigationItemSelected(@NonNull MenuItem item) {
                 switch (item.getItemId()) {
                     case (R.id.myCollection):
-                        Intent intent = new Intent(MainActivity.this, collection.class);
+                        Intent intent = new Intent(MainActivity.this, collectionLabActivity.class);
                         if (new_collections != null && opened) {
                             intent.putParcelableArrayListExtra("newCollections", new_collections);
                         }
@@ -189,7 +189,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 retry.setVisibility(View.INVISIBLE);
-
+                ObjectAnimator.ofFloat(refresh,"rotation",0,360).start();
                 initData();
             }
         });
@@ -279,16 +279,6 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (data != null) {
-            mDrawerLayout.close();
-            collect.setImageResource(R.drawable.collected);
-            String path = getExternalFilesDir("imageCache").getAbsolutePath() + "/" + data.getExtras().getString("filename");
-            requestWebPhotoBitmap(path);
-        }
-    }
 
     @Override
     protected void onDestroy() {
@@ -379,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
     /**
      * 获取 网络图片 Bitmap
      *
-     * @param imgUrl 网络图片url
+     * @param imgUrl 网络图片url，或本地路径
      */
     private void requestWebPhotoBitmap(String imgUrl) {
         Glide.with(MainActivity.this)

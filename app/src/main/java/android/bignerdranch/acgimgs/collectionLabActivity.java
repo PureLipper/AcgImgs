@@ -1,34 +1,18 @@
 package android.bignerdranch.acgimgs;
 
-import static java.lang.System.out;
-
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.Resources;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.PixelFormat;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -38,25 +22,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.DataSource;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
-import com.bumptech.glide.load.engine.GlideException;
-import com.bumptech.glide.load.engine.Resource;
-import com.bumptech.glide.request.FutureTarget;
-import com.bumptech.glide.request.RequestListener;
-import com.bumptech.glide.request.target.SimpleTarget;
-import com.bumptech.glide.request.target.Target;
-import com.bumptech.glide.request.transition.Transition;
 
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-public class collection extends AppCompatActivity {
+public class collectionLabActivity extends AppCompatActivity {
     private RecyclerView mRecyclerView;
     private CollectionAdapter mAdapter;
     private Button back;
@@ -104,7 +75,7 @@ public class collection extends AppCompatActivity {
     }
 
     private void update() {
-        myCollectionLab collectionLab = myCollectionLab.get(collection.this);
+        myCollectionLab collectionLab = myCollectionLab.get(collectionLabActivity.this);
         ArrayList<myCollection> collections = collectionLab.getMyCollections();
         if(newCollections != null){
             collections.addAll(newCollections);
@@ -115,10 +86,10 @@ public class collection extends AppCompatActivity {
     }
 
     private class CollectionHolder extends RecyclerView.ViewHolder implements View.OnClickListener,View.OnLongClickListener{
-        String filename;
+        String id;
         @Override
         public boolean onLongClick(View v) {
-            AlertDialog.Builder builder  = new AlertDialog.Builder(collection.this);
+            AlertDialog.Builder builder  = new AlertDialog.Builder(collectionLabActivity.this);
             builder.setTitle("确认" ) ;
             builder.setIcon(android.R.drawable.ic_dialog_info);
             builder.setMessage("是否删除此收藏？" ) ;
@@ -137,10 +108,9 @@ public class collection extends AppCompatActivity {
 
         @Override
         public void onClick(View v) {
-            Intent intent = new Intent();
-            intent.putExtra("filename",filename);
-            collection.this.setResult(RESULT_OK,intent);
-            collection.this.finish();
+            Intent intent = new Intent(collectionLabActivity.this,collectionCheckActivity.class);
+            intent.putExtra("id",id);
+            startActivity(intent);
         }
 
         private myCollection mMyCollection;
@@ -158,7 +128,7 @@ public class collection extends AppCompatActivity {
 
         public void bind(myCollection myCollection) {
             mMyCollection = myCollection;
-            filename = myCollection.getFilename();
+            id = myCollection.getId();
             mTextView.setText(myCollection.toString());
         }
     }
@@ -171,7 +141,7 @@ public class collection extends AppCompatActivity {
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            LayoutInflater layoutInflater = LayoutInflater.from(collection.this);
+            LayoutInflater layoutInflater = LayoutInflater.from(collectionLabActivity.this);
             return new CollectionHolder(layoutInflater, parent);
         }
 
@@ -180,7 +150,7 @@ public class collection extends AppCompatActivity {
             myCollection collection = mMyCollections.get(position);
             ((CollectionHolder) holder).bind(collection);
             File file = new File(getExternalFilesDir("imageCache").getAbsolutePath() + "/" + collection.getFilename());
-            Glide.with(collection.this)
+            Glide.with(collectionLabActivity.this)
                     .load(file)
                     .into(((CollectionHolder) holder).mImage);
         }
