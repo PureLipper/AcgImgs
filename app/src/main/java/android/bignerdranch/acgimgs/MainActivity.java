@@ -21,7 +21,6 @@ import android.provider.MediaStore;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -36,15 +35,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.fragment.app.FragmentManager;
-
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.CustomTarget;
-import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.target.Target;
 import com.bumptech.glide.request.transition.Transition;
 import com.google.android.material.navigation.NavigationView;
@@ -72,11 +68,11 @@ public class MainActivity extends AppCompatActivity {
         return myDataBaseHelper;
     }
 
+    private static int loadingImgQueueLen = 0;
     String DataBase_Name = "MyCollections";
     String Table_Name = "MyCollection";
     private Boolean opened = false;
     private ImageView ImageView;
-    private Bitmap imgBitmap = null;
     private ImageButton refresh;
     private ImageButton collect;
     private ImageButton menu;
@@ -115,19 +111,17 @@ public class MainActivity extends AppCompatActivity {
 
         myDataBaseHelper = new MyDataBaseHelper(MainActivity.this, DataBase_Name, 3);
 
-        ImageView = (ImageView) findViewById(R.id.Img_view);
-        menu = (ImageButton) findViewById(R.id.menu);
-        download = (ImageButton) findViewById(R.id.download);
-        refresh = (ImageButton) findViewById(R.id.refresh);
-        collect = (ImageButton) findViewById(R.id.collect);
-        search_button = (ImageButton) findViewById(R.id.search_button);
-        search_EditText = (EditText) findViewById(R.id.search_text);
-        retry = (Button) findViewById(R.id.retry);
-        mDrawerLayout = (DrawerLayout) findViewById(R.id.menu_drawer);
-        mNavigationView = (NavigationView) findViewById(R.id.navigation_view);
+        ImageView = findViewById(R.id.Img_view);
+        menu = findViewById(R.id.menu);
+        download = findViewById(R.id.download);
+        refresh = findViewById(R.id.refresh);
+        collect = findViewById(R.id.collect);
+        search_button = findViewById(R.id.search_button);
+        search_EditText = findViewById(R.id.search_text);
+        retry = findViewById(R.id.retry);
+        mDrawerLayout = findViewById(R.id.menu_drawer);
+        mNavigationView = findViewById(R.id.navigation_view);
         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-
-        FragmentManager fragmentManager = getSupportFragmentManager();
 
         if (savedInstanceState != null) {
             imgUrl = savedInstanceState.getString("url");
@@ -165,115 +159,86 @@ public class MainActivity extends AppCompatActivity {
                 search_text = s.toString();
             }
         });
-        mNavigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
-            @Override
-            public boolean onNavigationItemSelected(@NonNull MenuItem item) {
-                switch (item.getItemId()) {
-                    case (R.id.myCollection):
-                        Intent intent = new Intent(MainActivity.this, collectionLabActivity.class);
-                        if (new_collections != null && opened) {
-                            intent.putParcelableArrayListExtra("newCollections", new_collections);
-                        }
-                        startActivityForResult(intent, 1);
-                        new_collections.clear();
-                        opened = true;
-                        break;
-                    case (R.id.settings):
-                        startActivity(new Intent(MainActivity.this, SettingsActivity.class));
-                        break;
-                }
-                return true;
-            }
-        });
-        refresh.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                retry.setVisibility(View.INVISIBLE);
-                ObjectAnimator.ofFloat(refresh,"rotation",0,360).start();
-                initData();
-            }
-        });
-        menu.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mDrawerLayout.openDrawer(GravityCompat.START);
-            }
-        });
-        collect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String filename = System.currentTimeMillis() + ".jpg";
-                int myWidth = Target.SIZE_ORIGINAL;
-                int myHeight = Target.SIZE_ORIGINAL;
-                Glide.with(getApplicationContext())
-                        .asBitmap()
-                        .load(imgUrl)
-                        .into(new SimpleTarget<Bitmap>(myWidth, myHeight) {
-                            @Override
-                            public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                                saveBitmap(resource, getExternalFilesDir("imageCache").getAbsolutePath() + "/" + filename);
-                            }
-                        });
-
-                if (!checkIfCollected(imgUrl)) {
-                    String source = mSharedPreferences.getString("source", "0");
-                    switch (source) {
-                        case "0": {
-                            ContentValues contentValues = new ContentValues();
-                            contentValues.put("imgurl", imgUrl);
-                            contentValues.put("source", 0);
-                            contentValues.put("filename", filename);
-                            SQLiteDatabase db = myDataBaseHelper.getWritableDatabase();
-                            long id = db.insert(Table_Name, null, contentValues);
-                            if (id != -1) {
-                                Toast.makeText(MainActivity.this, "收藏成功", Toast.LENGTH_SHORT).show();
-                                new_collection = new myCollection(imgUrl, String.valueOf(id), 0, filename);
-                                collect.setImageResource(R.drawable.collected);
-                            } else
-                                Toast.makeText(MainActivity.this, "收藏失败", Toast.LENGTH_SHORT).show();
-                            break;
-                        }
-                        case "1": {
-                            ContentValues contentValues = new ContentValues();
-                            contentValues.put("imgurl", imgUrl);
-                            contentValues.put("r18", r18);
-                            contentValues.put("title", title);
-                            contentValues.put("author", author);
-                            contentValues.put("pid", pid);
-                            contentValues.put("tags", tags);
-                            contentValues.put("source", 1);
-                            contentValues.put("filename", filename);
-                            SQLiteDatabase db = myDataBaseHelper.getWritableDatabase();
-                            long id = db.insert(Table_Name, null, contentValues);
-                            if (id != -1) {
-                                Toast.makeText(MainActivity.this, "收藏成功", Toast.LENGTH_SHORT).show();
-                                new_collection = new myCollection(imgUrl, String.valueOf(id), title, author, tags, pid, r18, 1, filename);
-                                collect.setImageResource(R.drawable.collected);
-                            } else
-                                Toast.makeText(MainActivity.this, "收藏失败", Toast.LENGTH_SHORT).show();
-                            break;
-                        }
+        mNavigationView.setNavigationItemSelectedListener(item -> {
+            switch (item.getItemId()) {
+                case (R.id.myCollection):
+                    Intent intent = new Intent(MainActivity.this, collectionLabActivity.class);
+                    if (new_collections != null && opened) {
+                        intent.putParcelableArrayListExtra("newCollections", new_collections);
                     }
-                    new_collections.add(new_collection);
-                } else Toast.makeText(MainActivity.this, "收藏中已有此图片", Toast.LENGTH_SHORT).show();
+                    startActivityForResult(intent, 1);
+                    new_collections.clear();
+                    opened = true;
+                    break;
+                case (R.id.settings):
+                    startActivity(new Intent(MainActivity.this, SettingsActivity.class));
+                    break;
             }
+            return true;
         });
-        download.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (SaveJpg(ImageView)) {
-                    Toast.makeText(MainActivity.this, "保存成功", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(MainActivity.this, "保存失败", Toast.LENGTH_SHORT).show();
+        refresh.setOnClickListener(v -> {
+            retry.setVisibility(View.INVISIBLE);
+            ObjectAnimator.ofFloat(refresh,"rotation",0,360).start();
+            initData();
+        });
+        menu.setOnClickListener(v -> mDrawerLayout.openDrawer(GravityCompat.START));
+        collect.setOnClickListener(v -> {
+            String filename = System.currentTimeMillis() + ".jpg";
+            Bitmap bitmap = ((BitmapDrawable)(ImageView.getDrawable())).getBitmap();
+            saveBitmap(bitmap, getExternalFilesDir("imageCache").getAbsolutePath() + "/" + filename);
+
+            if (!checkIfCollected(imgUrl)) {
+                String source = mSharedPreferences.getString("source", "0");
+                switch (source) {
+                    case "0": {
+                        ContentValues contentValues = new ContentValues();
+                        contentValues.put("imgurl", imgUrl);
+                        contentValues.put("source", 0);
+                        contentValues.put("filename", filename);
+                        SQLiteDatabase db = myDataBaseHelper.getWritableDatabase();
+                        long id = db.insert(Table_Name, null, contentValues);
+                        if (id != -1) {
+                            Toast.makeText(MainActivity.this, "收藏成功", Toast.LENGTH_SHORT).show();
+                            new_collection = new myCollection(imgUrl, String.valueOf(id), 0, filename);
+                            collect.setImageResource(R.drawable.collected);
+                        } else
+                            Toast.makeText(MainActivity.this, "收藏失败", Toast.LENGTH_SHORT).show();
+                        break;
+                    }
+                    case "1": {
+                        ContentValues contentValues = new ContentValues();
+                        contentValues.put("imgurl", imgUrl);
+                        contentValues.put("r18", r18);
+                        contentValues.put("title", title);
+                        contentValues.put("author", author);
+                        contentValues.put("pid", pid);
+                        contentValues.put("tags", tags);
+                        contentValues.put("source", 1);
+                        contentValues.put("filename", filename);
+                        SQLiteDatabase db = myDataBaseHelper.getWritableDatabase();
+                        long id = db.insert(Table_Name, null, contentValues);
+                        if (id != -1) {
+                            Toast.makeText(MainActivity.this, "收藏成功", Toast.LENGTH_SHORT).show();
+                            new_collection = new myCollection(imgUrl, String.valueOf(id), title, author, tags, pid, r18, 1, filename);
+                            collect.setImageResource(R.drawable.collected);
+                        } else
+                            Toast.makeText(MainActivity.this, "收藏失败", Toast.LENGTH_SHORT).show();
+                        break;
+                    }
                 }
+                new_collections.add(new_collection);
+            } else Toast.makeText(MainActivity.this, "收藏中已有此图片", Toast.LENGTH_SHORT).show();
+        });
+        download.setOnClickListener(v -> {
+            if (SaveJpg(ImageView)) {
+                Toast.makeText(MainActivity.this, "保存成功", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(MainActivity.this, "保存失败", Toast.LENGTH_SHORT).show();
             }
         });
-        search_button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                search_EditText.clearFocus();
-                initData();
-            }
+        search_button.setOnClickListener(v -> {
+            search_EditText.clearFocus();
+            initData();
         });
 
 
@@ -372,21 +337,26 @@ public class MainActivity extends AppCompatActivity {
      * @param imgUrl 网络图片url，或本地路径
      */
     private void requestWebPhotoBitmap(String imgUrl) {
+        loadingImgQueueLen++;
+        int queueNum = loadingImgQueueLen;
         Glide.with(MainActivity.this)
                 .asBitmap()
                 .load(imgUrl)
+                .timeout(15000)
                 .listener(new RequestListener<Bitmap>() {
             @Override
             public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Bitmap> target, boolean isFirstResource) {
-                Toast.makeText(MainActivity.this, "加载失败", Toast.LENGTH_SHORT).show();
-                retry.setVisibility(View.VISIBLE);
-                retry.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
+                if(queueNum == loadingImgQueueLen){
+                    Toast.makeText(MainActivity.this, "加载失败", Toast.LENGTH_SHORT).show();
+                    Log.d("onLoadFailed", "onLoadFailed: " + e.toString());
+                    e.logRootCauses("onLoadFailed");
+                    retry.setVisibility(View.VISIBLE);
+                    retry.setOnClickListener(v -> {
                         requestWebPhotoBitmap(imgUrl);
                         retry.setVisibility(View.INVISIBLE);
-                    }
-                });
+                    });
+                }
+
                 return false;
             }
 
@@ -399,8 +369,10 @@ public class MainActivity extends AppCompatActivity {
                 @SuppressLint("ClickableViewAccessibility")
                 @Override
                 public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
-                    imgBitmap = resource;
-                    ImageView.setImageBitmap(imgBitmap);
+                    if(queueNum == loadingImgQueueLen) {
+                        ImageView.setImageBitmap(resource);
+                        loadingImgQueueLen = 0;
+                    }
                 }
 
             @Override
